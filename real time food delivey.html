@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwiftBite - Real-Time Food Delivery Tracking System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Persistent Top Header -->
+  <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
+        🍕
+      </div>
+      <div>
+        <span class="text-xl font-extrabold tracking-tight text-slate-900">SwiftBite</span>
+        <span class="hidden sm:inline-block ml-2 text-xs bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full font-semibold">
+          Live Delivery Tracking
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Role Switcher (Customer vs Rider) -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button onclick="switchRole('customer')" id="role-btn-customer" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-orange-600 text-white shadow-sm">
+          🍔 Customer View
+        </button>
+        <button onclick="switchRole('rider')" id="role-btn-rider" class="px-3 py-1 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900">
+          🛵 Delivery Agent
+        </button>
+      </div>
+
+      <!-- Notification Bell -->
+      <button onclick="switchTab('Notifications')" title="Push Notifications" class="relative p-2.5 rounded-full hover:bg-slate-100 border border-slate-200 transition">
+        🔔
+        <span id="notif-badge" class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+          2
+        </span>
+      </button>
+
+      <!-- Clickable Profile Avatar -->
+      <button onclick="switchTab('My Profile')" title="Open My Profile" class="flex items-center gap-3 p-1.5 pr-3.5 rounded-full hover:bg-slate-100 transition border border-slate-200 cursor-pointer">
+        <div id="header-initials" class="w-9 h-9 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-sm">
+          JD
+        </div>
+        <div class="text-left hidden sm:block">
+          <p id="header-name" class="text-xs font-bold text-slate-800 leading-tight">Jayesh Deshmukh</p>
+          <p id="header-role-sub" class="text-[11px] text-orange-600 font-semibold">📍 Dharampeth, Nagpur</p>
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <!-- Toast Banner -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium border border-slate-700"></div>
+
+  <!-- Main Body Layout -->
+  <div class="flex flex-1">
+    <!-- Left Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 p-4 hidden md:flex flex-col justify-between">
+      <nav id="sidebar-nav" class="space-y-1.5">
+        <!-- Populated dynamically based on role -->
+      </nav>
+
+      <div class="p-4 rounded-xl bg-orange-50 border border-orange-100 text-xs text-orange-900 space-y-2">
+        <p class="font-bold">⚡ Live GPS Tracking</p>
+        <p class="text-orange-700">Real-time rider coordinates and ETA updates active.</p>
+        <button onclick="switchTab('Order Food')" class="w-full py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition">
+          + Order Food Now
+        </button>
+      </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-20 flex overflow-x-auto p-2 gap-1" id="mobile-nav"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-6 md:p-8 pb-20 md:pb-8 max-w-6xl mx-auto w-full">
+      <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 pb-4">
+        <div>
+          <h1 id="page-title" class="text-2xl font-bold text-slate-900">Live Order Tracking</h1>
+          <p class="text-sm text-slate-500">Real-time GPS visibility from kitchen preparation to doorstep delivery.</p>
+        </div>
+        <button onclick="switchTab('Order Food')" class="px-4 py-2 rounded-xl bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 transition self-start sm:self-auto">
+          + Browse Restaurants
+        </button>
+      </div>
+
+      <!-- TAB 1: LIVE ORDER TRACKING (MAP SIMULATOR) -->
+      <div id="tab-Live Tracking" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Left Column: Live Map Simulator & Timeline -->
+          <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold">Active Order #SB-8042</span>
+                <h2 class="text-lg font-bold text-slate-900 mt-2">Spice Kraft (Dharampeth)</h2>
+              </div>
+              <div class="text-right">
+                <p class="text-xs font-bold uppercase text-slate-400">Estimated Arrival</p>
+                <p id="live-eta" class="text-xl font-extrabold text-orange-600">12 Mins</p>
+              </div>
+            </div>
+
+            <!-- Simulated Map Box -->
+            <div class="relative w-full h-56 rounded-2xl bg-slate-900 overflow-hidden border border-slate-800 flex items-center justify-center">
+              <!-- Grid background lines -->
+              <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              
+              <!-- Route Line -->
+              <div class="absolute w-3/4 h-1 bg-orange-500/40 rounded-full top-1/2 left-12 -translate-y-1/2"></div>
+
+              <!-- Restaurant Pin -->
+              <div class="absolute left-10 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold shadow-lg">🏪</div>
+                <span class="text-[10px] text-white bg-slate-900/80 px-2 py-0.5 rounded mt-1 font-semibold">Restaurant</span>
+              </div>
+
+              <!-- Moving Delivery Rider Pin -->
+              <div id="rider-pin" class="absolute left-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-700">
+                <div class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xl animate-bounce">🛵</div>
+                <span id="rider-status-label" class="text-[10px] text-white bg-emerald-900/90 px-2.5 py-0.5 rounded-full mt-1 font-bold shadow">Rider: Amit (1.2 km away)</span>
+              </div>
+
+              <!-- Customer Home Pin -->
+              <div class="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold shadow-lg">🏠</div>
+                <span class="text-[10px] text-white bg-slate-900/80 px-2 py-0.5 rounded mt-1 font-semibold">Your Location</span>
+              </div>
+            </div>
+
+            <!-- Status Step Progression Bar -->
+            <div class="space-y-3">
+              <h3 class="text-sm font-bold text-slate-900">Order Progression Timeline</h3>
+              <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div id="step-1" class="p-2.5 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-800">1. Placed</div>
+                <div id="step-2" class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-500">2. Preparing</div>
+                <div id="step-3" class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-500">3. Out for Delivery</div>
+                <div id="step-4" class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-500">4. Delivered</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Order Summary & Rider Contact -->
+          <div class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-base font-bold text-slate-900">Delivery Partner</h3>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-700 font-extrabold flex items-center justify-center text-lg">🛵</div>
+                <div>
+                  <p class="font-bold text-slate-900">Amit Verma</p>
+                  <p class="text-xs text-slate-500">⭐ 4.9 (1,420 deliveries) • Honda Activa</p>
+                </div>
+              </div>
+              <button onclick="showToast('Calling delivery partner Amit (+91 98230 11223)...')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition">
+                📞 Call Delivery Partner
+              </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <h3 class="text-base font-bold text-slate-900">Order Summary</h3>
+              <div class="space-y-2 text-xs text-slate-600 divide-y divide-slate-100">
+                <div class="flex justify-between pt-1"><span>Paneer Tikka Masala (x1)</span><strong>₹340</strong></div>
+                <div class="flex justify-between pt-2"><span>Butter Naan (x3)</span><strong>₹120</strong></div>
+                <div class="flex justify-between pt-2"><span>Delivery & Taxes</span><strong>₹65</strong></div>
+                <div class="flex justify-between pt-2 text-sm font-bold text-slate-900 border-t border-slate-200"><span>Total Paid</span><strong class="text-orange-600">₹525</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: ORDER FOOD (RESTAURANT & MENU) -->
+      <div id="tab-Order Food" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Restaurant 1 -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="h-36 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-inner">
+                🍛 Spice Kraft
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 mt-3">Spice Kraft Restaurant</h3>
+              <p class="text-xs text-slate-500 mt-0.5">North Indian • Mughlai • Biryani</p>
+              <p class="text-xs text-emerald-600 font-semibold mt-2">⭐ 4.8 (30-35 mins) • Dharampeth</p>
+            </div>
+            <button onclick="placeNewOrder('Spice Kraft', 'Paneer Butter Masala & Garlic Naan', 480)" class="mt-4 w-full py-2.5 bg-orange-600 text-white rounded-xl text-xs font-bold hover:bg-orange-700 transition">
+              Order Now (₹480)
+            </button>
+          </div>
+
+          <!-- Restaurant 2 -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="h-36 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-inner">
+                🍔 Burger & Co.
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 mt-3">Burger & Co. House</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Fast Food • American • Beverages</p>
+              <p class="text-xs text-emerald-600 font-semibold mt-2">⭐ 4.6 (20-25 mins) • Civil Lines</p>
+            </div>
+            <button onclick="placeNewOrder('Burger & Co.', 'Crispy Chicken Burger & Fries', 350)" class="mt-4 w-full py-2.5 bg-orange-600 text-white rounded-xl text-xs font-bold hover:bg-orange-700 transition">
+              Order Now (₹350)
+            </button>
+          </div>
+
+          <!-- Restaurant 3 -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="h-36 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-inner">
+                🍕 Pizza Italia
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 mt-3">Pizza Italia Woodfire</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Italian • Woodfire Pizza • Pasta</p>
+              <p class="text-xs text-emerald-600 font-semibold mt-2">⭐ 4.9 (25-30 mins) • Sitabuldi</p>
+            </div>
+            <button onclick="placeNewOrder('Pizza Italia', 'Farmhouse Woodfire Pizza (L)', 620)" class="mt-4 w-full py-2.5 bg-orange-600 text-white rounded-xl text-xs font-bold hover:bg-orange-700 transition">
+              Order Now (₹620)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: DELIVERY AGENT DASHBOARD -->
+      <div id="tab-Delivery Dashboard" class="hidden space-y-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">🛵 Delivery Agent Control Console</h2>
+              <p class="text-xs text-slate-500">Accept pending orders, navigate via GPS, and advance delivery status milestones.</p>
+            </div>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">Rider Online (GPS Active)</span>
+          </div>
+
+          <div class="space-y-4" id="rider-orders-list"></div>
+        </div>
+      </div>
+
+      <!-- TAB 4: PUSH NOTIFICATIONS -->
+      <div id="tab-Notifications" class="hidden space-y-4">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-900">Real-Time Push Notifications</h2>
+            <button onclick="markNotificationsRead()" class="text-xs font-bold text-orange-600 hover:underline">Mark All as Read</button>
+          </div>
+          <div id="notifications-list" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- TAB 5: MY PROFILE -->
+      <div id="tab-My Profile" class="hidden">
+        <div class="max-w-xl bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+              <div id="profile-avatar" class="w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-xl">
+                JD
+              </div>
+              <div>
+                <h2 id="profile-display-name" class="text-xl font-bold text-slate-900">Jayesh Deshmukh</h2>
+                <p id="profile-display-role" class="text-xs text-orange-600 font-bold">Customer • 14 Orders Completed</p>
+              </div>
+            </div>
+            <button onclick="toggleProfileEdit(true)" id="edit-profile-btn" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold hover:bg-slate-200">
+              Edit Profile
+            </button>
+          </div>
+
+          <div id="profile-view-mode" class="space-y-3 text-sm border-t border-slate-200 pt-4">
+            <div class="flex justify-between py-1.5"><span class="text-slate-500">Full Name:</span><span id="pv-name" class="font-semibold">Jayesh Deshmukh</span></div>
+            <div class="flex justify-between py-1.5"><span class="text-slate-500">Default Address:</span><span id="pv-address" class="font-semibold">Plot 42, Laxmi Nagar, Dharampeth, Nagpur</span></div>
+            <div class="flex justify-between py-1.5"><span class="text-slate-500">Phone Number:</span><span id="pv-phone" class="font-semibold">+91 98765 43210</span></div>
+            <div class="flex justify-between py-1.5"><span class="text-slate-500">Email:</span><span id="pv-email" class="font-semibold">jayesh@college.edu</span></div>
+          </div>
+
+          <form id="profile-edit-mode" onsubmit="saveProfile(event)" class="hidden space-y-4 border-t border-slate-200 pt-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
+              <input type="text" id="pe-name" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Delivery Address</label>
+              <input type="text" id="pe-address" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Phone Number</label>
+              <input type="text" id="pe-phone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Email Address</label>
+              <input type="email" id="pe-email" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="px-5 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-semibold hover:bg-orange-700">Save Changes</button>
+              <button type="button" onclick="toggleProfileEdit(false)" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Application State
+    let currentUserRole = 'customer'; // 'customer' or 'rider'
+    let currentStep = 3; // 1: Placed, 2: Preparing, 3: Out for Delivery, 4: Delivered
+
+    let profile = {
+      name: 'Jayesh Deshmukh',
+      address: 'Plot 42, Laxmi Nagar, Dharampeth, Nagpur',
+      phone: '+91 98765 43210',
+      email: 'jayesh@college.edu'
+    };
+
+    let activeOrder = {
+      id: 'SB-8042',
+      restaurant: 'Spice Kraft',
+      items: 'Paneer Tikka Masala & Naan',
+      amount: 525,
+      status: 'Out for Delivery',
+      eta: '12 Mins'
+    };
+
+    let notifications = [
+      { id: 1, title: '🛵 Rider Picked Up Order', message: 'Amit Verma has picked up your order from Spice Kraft.', time: '5 mins ago', unread: true },
+      { id: 2, title: '🍳 Food Prepared Fresh', message: 'Kitchen finished preparing your meal.', time: '12 mins ago', unread: true }
+    ];
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = '✓ ' + msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+
+    // Role Switcher
+    function switchRole(role) {
+      currentUserRole = role;
+      document.getElementById('role-btn-customer').className = `px-3 py-1 rounded-lg text-xs font-bold transition ${role === 'customer' ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`;
+      document.getElementById('role-btn-rider').className = `px-3 py-1 rounded-lg text-xs font-bold transition ${role === 'rider' ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`;
+
+      if (role === 'rider') {
+        document.getElementById('header-role-sub').innerText = 'Delivery Partner • Online';
+        switchTab('Delivery Dashboard');
+      } else {
+        document.getElementById('header-role-sub').innerText = '📍 Dharampeth, Nagpur';
+        switchTab('Live Tracking');
+      }
+      renderNavigation();
+    }
+
+    function renderNavigation() {
+      const nav = document.getElementById('sidebar-nav');
+      const mobileNav = document.getElementById('mobile-nav');
+      let items = [];
+
+      if (currentUserRole === 'customer') {
+        items = [
+          { name: 'Live Tracking', icon: '📍' },
+          { name: 'Order Food', icon: '🍔' },
+          { name: 'Notifications', icon: '🔔' },
+          { name: 'My Profile', icon: '👤' }
+        ];
+      } else {
+        items = [
+          { name: 'Delivery Dashboard', icon: '🛵' },
+          { name: 'Notifications', icon: '🔔' },
+          { name: 'My Profile', icon: '👤' }
+        ];
+      }
+
+      nav.innerHTML = items.map(item => `
+        <button onclick="switchTab('${item.name}')" id="nav-${item.name}" class="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition text-slate-600 hover:bg-slate-100 flex items-center gap-3">
+          <span>${item.icon}</span> ${item.name}
+        </button>
+      `).join('');
+
+      mobileNav.innerHTML = items.map(item => `
+        <button onclick="switchTab('${item.name}')" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 whitespace-nowrap">${item.icon} ${item.name}</button>
+      `).join('');
+    }
+
+    function switchTab(tabName) {
+      ['Live Tracking', 'Order Food', 'Delivery Dashboard', 'Notifications', 'My Profile'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.add('hidden');
+      });
+
+      const activeEl = document.getElementById('tab-' + tabName);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      document.getElementById('page-title').innerText = tabName;
+      renderAll();
+    }
+
+    // Place New Order Simulator
+    function placeNewOrder(restaurant, items, amount) {
+      activeOrder = {
+        id: 'SB-' + Math.floor(1000 + Math.random() * 9000),
+        restaurant,
+        items,
+        amount,
+        status: 'Order Placed',
+        eta: '25 Mins'
+      };
+      currentStep = 1;
+
+      notifications.unshift({
+        id: Date.now(),
+        title: 'Order Placed Successfully',
+        message: `Your order #${activeOrder.id} at ${restaurant} has been accepted.`,
+        time: 'Just now',
+        unread: true
+      });
+
+      showToast(`Order placed at ${restaurant}!`);
+      switchTab('Live Tracking');
+    }
+
+    // Rider Status Progression
+    function advanceRiderStep(stepNum) {
+      currentStep = stepNum;
+      const statusNames = ['Order Placed', 'Kitchen Preparing', 'Out for Delivery', 'Delivered'];
+      activeOrder.status = statusNames[stepNum - 1];
+
+      if (stepNum === 4) activeOrder.eta = 'Arrived';
+      else if (stepNum === 3) activeOrder.eta = '12 Mins';
+      else if (stepNum === 2) activeOrder.eta = '20 Mins';
+
+      notifications.unshift({
+        id: Date.now(),
+        title: `Order Status: ${activeOrder.status}`,
+        message: `Order #${activeOrder.id} status updated to: ${activeOrder.status}.`,
+        time: 'Just now',
+        unread: true
+      });
+
+      showToast(`Order status updated to: ${activeOrder.status}`);
+      renderAll();
+    }
+
+    function markNotificationsRead() {
+      notifications.forEach(n => n.unread = false);
+      renderAll();
+    }
+
+    function getInitials(name) {
+      return name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'SB';
+    }
+
+    function toggleProfileEdit(editing) {
+      document.getElementById('profile-view-mode').classList.toggle('hidden', editing);
+      document.getElementById('profile-edit-mode').classList.toggle('hidden', !editing);
+      document.getElementById('edit-profile-btn').classList.toggle('hidden', editing);
+      if (editing) {
+        document.getElementById('pe-name').value = profile.name;
+        document.getElementById('pe-address').value = profile.address;
+        document.getElementById('pe-phone').value = profile.phone;
+        document.getElementById('pe-email').value = profile.email;
+      }
+    }
+
+    function saveProfile(e) {
+      e.preventDefault();
+      profile.name = document.getElementById('pe-name').value.trim();
+      profile.address = document.getElementById('pe-address').value.trim();
+      profile.phone = document.getElementById('pe-phone').value.trim();
+      profile.email = document.getElementById('pe-email').value.trim();
+      toggleProfileEdit(false);
+      renderAll();
+      showToast('Profile updated successfully!');
+    }
+
+    function renderAll() {
+      const initials = getInitials(profile.name);
+      document.getElementById('header-initials').innerText = initials;
+      document.getElementById('profile-avatar').innerText = initials;
+      document.getElementById('header-name').innerText = profile.name;
+      document.getElementById('profile-display-name').innerText = profile.name;
+      document.getElementById('pv-name').innerText = profile.name;
+      document.getElementById('pv-address').innerText = profile.address;
+      document.getElementById('pv-phone').innerText = profile.phone;
+      document.getElementById('pv-email').innerText = profile.email;
+
+      // Map Rider Pin Animation Position based on step
+      const riderPin = document.getElementById('rider-pin');
+      const riderLabel = document.getElementById('rider-status-label');
+      if (riderPin) {
+        if (currentStep === 1) {
+          riderPin.style.left = '20%';
+          riderLabel.innerText = 'At Restaurant';
+        } else if (currentStep === 2) {
+          riderPin.style.left = '35%';
+          riderLabel.innerText = 'Kitchen Packing';
+        } else if (currentStep === 3) {
+          riderPin.style.left = '65%';
+          riderLabel.innerText = 'Rider: Amit (1.2 km)';
+        } else {
+          riderPin.style.left = '85%';
+          riderLabel.innerText = 'Delivered ✓';
+        }
+      }
+
+      document.getElementById('live-eta').innerText = activeOrder.eta;
+
+      // Timeline Step Classes
+      for (let i = 1; i <= 4; i++) {
+        const stepEl = document.getElementById('step-' + i);
+        if (stepEl) {
+          if (i <= currentStep) {
+            stepEl.className = 'p-2.5 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-800';
+          } else {
+            stepEl.className = 'p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-400';
+          }
+        }
+      }
+
+      // Rider Orders Dashboard List
+      const riderOrders = document.getElementById('rider-orders-list');
+      if (riderOrders) {
+        riderOrders.innerHTML = `
+          <div class="p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-lg bg-orange-600 text-white font-extrabold text-xs">#${activeOrder.id}</span>
+                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">${activeOrder.status}</span>
+              </div>
+              <h3 class="font-bold text-slate-900 mt-2">${activeOrder.restaurant} (${activeOrder.items})</h3>
+              <p class="text-xs text-slate-500 mt-1">📍 Deliver to: ${profile.address} • 📞 ${profile.phone}</p>
+              <p class="text-xs font-extrabold text-orange-600 mt-1">Amount to Collect: ₹${activeOrder.amount} (Online Paid)</p>
+            </div>
+            <div class="flex flex-col gap-2 min-w-[180px]">
+              <select onchange="advanceRiderStep(Number(this.value))" class="px-3 py-2 rounded-xl border border-slate-300 font-bold text-xs bg-slate-50">
+                <option value="1" ${currentStep === 1 ? 'selected' : ''}>1. Order Placed</option>
+                <option value="2" ${currentStep === 2 ? 'selected' : ''}>2. Preparing</option>
+                <option value="3" ${currentStep === 3 ? 'selected' : ''}>3. Out for Delivery</option>
+                <option value="4" ${currentStep === 4 ? 'selected' : ''}>4. Delivered ✓</option>
+              </select>
+            </div>
+          </div>
+        `;
+      }
+
+      // Notifications
+      const unread = notifications.filter(n => n.unread).length;
+      const badge = document.getElementById('notif-badge');
+      badge.innerText = unread;
+      badge.classList.toggle('hidden', unread === 0);
+
+      document.getElementById('notifications-list').innerHTML = notifications.map(n => `
+        <div class="p-4 rounded-xl border flex items-start justify-between gap-4 ${n.unread ? 'bg-orange-50/60 border-orange-200' : 'bg-white border-slate-200'}">
+          <div>
+            <p class="text-sm font-bold text-slate-900">${n.title}</p>
+            <p class="text-xs text-slate-600 mt-1">${n.message}</p>
+          </div>
+          <span class="text-xs text-slate-400 whitespace-nowrap">${n.time}</span>
+        </div>
+      `).join('');
+    }
+
+    // Initial Load
+    renderNavigation();
+    renderAll();
+  </script>
+</body>
+</html>
